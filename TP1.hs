@@ -177,9 +177,18 @@ fillTableEntryTsp dist n t (i, s)
           getMaybeValue Nothing = maxBound
           getMaybeValue (Just x) = x
 
+findTour :: AdjMatrix -> Int -> TspCoord -> TspEntry
+findTour dist n  (i, s)
+    | isEmptySet s = (getMaybeValue (dist Data.Array.! (i,n)), [i,n])
+    | otherwise = minimum [addStart (findTour dist n (j, delFromSet s j)) (getMaybeValue (dist Data.Array.! (i, j))) | j <- setToList s]
+    where addStart (c, p) w = if (c == maxBound) || (w == maxBound) then (maxBound, []) else (c+w, i:p)
+          getMaybeValue Nothing = maxBound
+          getMaybeValue (Just x) = x
 
 tspBruteForce :: RoadMap -> Path
-tspBruteForce = undefined -- only for groups of 3 people; groups of 2 people: do not edit this function
+tspBruteForce g = if cost == maxBound then [] else map (intToCity g) p --transform int path to city path
+    where n = length (cities g)
+          (cost, p) = findTour (toAdjMatrix g) n (n, fullSet (n-1))
 
 -- Some graphs to test your work
 gTest1 :: RoadMap
