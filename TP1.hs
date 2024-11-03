@@ -228,7 +228,8 @@ updateDistSource:: AdjMatrix -> SpTable -> PrevTable -> PriorityQueue -> Priorit
 updateDistSource adjMatrix dist prev Empty pq u = (dist,prev,pq)
 updateDistSource adjMatrix dist prev pq newPQ u  
     | dist2 == maxBound = updateDistSource adjMatrix dist prev (removeMin pq) (insert (distv, v) newPQ) u 
-    | alt <= distv = updateDistSource adjMatrix newDist newPrev (removeMin pq) (insert (alt, v) newPQ) u 
+    | alt == distv = updateDistSource adjMatrix newDist newPrev (removeMin pq) (insert (alt, v) newPQ) u 
+    | alt < distv = updateDistSource adjMatrix newDist newPrev2 (removeMin pq) (insert (alt, v) newPQ) u 
     | otherwise = updateDistSource adjMatrix dist prev (removeMin pq) (insert (distv, v) newPQ) u 
     where
         alt = dist1 + dist2
@@ -237,6 +238,7 @@ updateDistSource adjMatrix dist prev pq newPQ u
         distv = findTable dist v
         newDist = updTable (v,alt) dist
         newPrev = updTable (v,(u:(findTable prev v))) prev
+        newPrev2 = updTable (v,[u]) prev
         v = snd (findMin pq) 
 
 
