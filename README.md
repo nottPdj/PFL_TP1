@@ -2,11 +2,11 @@
 
 ## Group members and participation
 
-David dos Santos Carvalho Ranito, up202206312  - 33%
+David dos Santos Carvalho Ranito, up202206312  - 33% - Implemented 1, 4, 7, 10
 
-Pedro Daniel Freitas João,        up202204962  - 33%
+Pedro Daniel Freitas João,        up202204962  - 33% - Implemented 2, 5, 8
 
-Tiago Freitas Torres,             up202208938  - 33%
+Tiago Freitas Torres,             up202208938  - 33% - Implemented 3, 6, 9
 
 ## TSP
 
@@ -44,7 +44,9 @@ Comparing the theoretical complexity we can see that O((n-1)!) is worse than O(n
 
 #### Differences regarding the test roadmaps
 
-//TODO
+When running the tsp with the gTest1, the dynamic programming took 0.45 secs and the brute force took 1.62 secs.
+
+![diff TSP gTest1](https://github.com/user-attachments/assets/c67d3549-0434-4d82-adc2-c4137b24b6bb)
 
 
 ## Shortest's Path
