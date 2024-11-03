@@ -8,7 +8,6 @@ Pedro Daniel Freitas João,        up202204962  - 33%
 
 Tiago Freitas Torres,             up202208938  - 33%
 
-
 ## TSP
 
 ### Dynamic programming
@@ -48,5 +47,23 @@ Comparing the theoretical complexity we can see that O((n-1)!) is worse than O(n
 //TODO
 
 
+## Shortest's Path
+
+#### Implementation
+
+The implementation of the shortestPath function was an adaptation of Dijkstra's algorithm.
+
+For this, we defined the type PriorityQueue*,which  was implemented through a min-Heap, since the priority is from the nodes that have the least distance from the source. 
+
+Like in the TSP, the RoadMap was converted to an Adjacency Matrix represantion and each city was attributed an Int (starting from 1).
+To store the distances from the source to each node, and each paths, tables were used, like in the TSP. 
+
+The Dijkstra's algorithm return the first the shortest path from the source to the target, however if there's more than a shortest path, it returns the first found. Since we were aiming for a different approach, returning all the shortests paths, we needed to adapt the algorithm. After finding a shortest path, we also need to check if we can reach the source with the same total distance as the shortest.
+
+#### Time Complexity
+
+O(V^2) 
+
+---
 
 [RL99] Fethi Rabhi and Guy Lapalme. Algorithms: a functional programming approach. Addison-Wesley, 2 edition, 1999.

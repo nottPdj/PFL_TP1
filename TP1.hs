@@ -14,11 +14,12 @@ type AdjMatrix = Data.Array.Array (Int,Int) (Maybe Distance)
 type PriorityQueue = Heap (Distance, Int)
 
 -- HEAP
-
+-- Auxiliary heap, to define priority queue based on minimum distance
 data Heap a = Empty
             | Node a (Heap a) (Heap a)
             deriving (Show, Eq)
 
+-- Merges two heaps
 merge :: Ord a => Heap a -> Heap a -> Heap a
 merge Empty h = h
 merge h Empty = h
@@ -26,20 +27,25 @@ merge h1@(Node x left1 right1) h2@(Node y left2 right2)
     | x <= y    = Node x left1 (merge right1 h2)
     | otherwise = Node y left2 (merge h1 right2)
 
+-- Inserts
 insert :: Ord a => a -> Heap a -> Heap a
 insert x h = merge (Node x Empty Empty) h
 
+-- Returns the minimum element
 findMin :: Ord a => Heap a -> a
 findMin (Node x _ _) = x
 
+-- Removes the minimum element
 removeMin :: Ord a => Heap a -> Heap a
 removeMin Empty = Empty
 removeMin (Node _ left right) = merge left right
 
+-- Returns the size of the heap
 size :: Heap a -> Int
 size Empty = 0
 size (Node _ left right) = 1 + size left + size right
 
+-- Populates the initial PriorityQueue
 populateQueue :: PriorityQueue -> Int -> Int -> PriorityQueue
 populateQueue q size source 
     | size == 0 = q
@@ -154,6 +160,7 @@ cities ((c1, c2, d):xs) | elem c1 rest && elem c2 rest = rest
                         where
                             rest = cities xs
 
+-- Returns a boolean whether two cities are linked directly
 areAdjacent :: RoadMap -> City -> City -> Bool
 areAdjacent [] _ _ = False
 areAdjacent ((a,b,c):xs) c1 c2
@@ -179,6 +186,7 @@ adjacent ((c1,c2,d):xs) c
     | c2 == c = (c1,d):adjacent xs c
     | otherwise = adjacent xs c
 
+-- Returns the total distance (cost) of a Path between two cities, if all the cities in the path are connect directly, otherwise returns Nothing
 pathDistance :: RoadMap -> Path -> Maybe Distance
 pathDistance _ [] = Just 0
 pathDistance _ [_] = Just 0
@@ -238,6 +246,7 @@ isStronglyConnected r =  length (dfs (head (cities r)) []) == length (cities r)
                                               | otherwise =  foldr dfs (c : visited) adj
                                                 where adj = map fst (adjacent r c)
 
+-- Returns all the shortests paths connecting two cities, if a path exists between them
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath roadmap c1 c2 
     | c1 == c2 = [[c1]]
@@ -249,9 +258,13 @@ shortestPath roadmap c1 c2
             prevCity = newTable [(city,[]) | city <- [1..n]]
             source = cityToInt roadmap c1
             target = cityToInt roadmap c2
-            n = length (cities roadmap)
+            n = length (cities roadmap) -- number of cities
             
-
+-- Returns a list of Ints, since cities are represented as Int's
+-- AdjMatrix - Graph represented as an adjacency matrix
+-- PriorityQueue - Priority queue containing the unexplored nodes
+-- SpTable - Table that contains the distances that each city has to source
+-- PrevTable - Table that contains a list of cities previously visited to the one indexed
 dijkstra :: AdjMatrix -> PriorityQueue -> SpTable -> PrevTable -> Int -> Int -> Int -> [[Int]]
 dijkstra adjMatrix Empty _ prevCity source target n = recursivePath prevCity source target [] []
 dijkstra adjMatrix pq distSource prevCity source target n = dijkstra adjMatrix newPQ newDistSource newPrevCity source target n
@@ -259,6 +272,13 @@ dijkstra adjMatrix pq distSource prevCity source target n = dijkstra adjMatrix n
         (newDistSource, newPrevCity,newPQ) = updateDistSource adjMatrix distSource prevCity (removeMin pq) Empty u 
         u = snd(findMin pq)
 
+-- Function to update all the data structures used, tables and priorityqueue
+-- AdjMatrix - Graph represented as an adjacency matrix
+-- SpTable - Table that contains the distances that each city has to source
+-- PrevTable - Table that contains a list of cities previously visited to the one indexed
+-- PriorityQueue - Priority queue containing the unexplored nodes
+-- PriorityQueue - Priority queue to be updated with new distances
+-- Int - Node with the minimum distance to the source
 updateDistSource:: AdjMatrix -> SpTable -> PrevTable -> PriorityQueue -> PriorityQueue -> Int ->  (SpTable, PrevTable, PriorityQueue)
 updateDistSource adjMatrix dist prev Empty pq u = (dist,prev,pq)
 updateDistSource adjMatrix dist prev pq newPQ u  
@@ -276,8 +296,11 @@ updateDistSource adjMatrix dist prev pq newPQ u
         newPrev2 = updTable (v,[u]) prev
         v = snd (findMin pq) 
 
-
-
+-- Returns the a list of the shortest paths computed
+-- PrevTable - Table that contains a list of cities previously visited to the one indexed
+-- Int - source node and target - node being explored to build path
+-- [Int] - path being built
+-- [[Int]] - accumulator of the paths built
 recursivePath :: PrevTable -> Int -> Int -> [Int] -> [[Int]] -> [[Int]]
 recursivePath prevCity source target path acc 
     | previous == [] = if path == [] then acc else (source:path):acc
@@ -285,6 +308,11 @@ recursivePath prevCity source target path acc
     where
         previous = findTable prevCity target
 
+-- Auxiliar function to build the recursivePath
+-- PrevTable - Table that contains a list of cities previously visited to the one indexed
+-- Int - source node and target - node being explored to build path
+-- [Int] - list of the previous nodes to target and path being built
+-- [[Int]] - accumulator of the paths built
 buildPath :: PrevTable -> Int -> [Int] -> [Int] -> [[Int]] -> [[Int]]
 buildPath prevCity source [] path acc = acc
 buildPath prevCity source (p:ps) path acc = buildPath prevCity source ps path (recursivePath prevCity source p path acc)
