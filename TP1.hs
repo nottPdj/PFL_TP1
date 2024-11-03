@@ -1,6 +1,6 @@
 --import qualified Data.List
 import qualified Data.Array
-import qualified Data.Bits
+--import qualified Data.Bits
 
 -- PFL 2024/2025 Practical assignment 1
 
@@ -49,26 +49,33 @@ populateQueue q size source
 
 -- SET
 
+--Operated in binary. A number n (n>0) is in the set if the bit (n+1) (from right to left) is 1 and isn't in the set if the bit is 0
 type Set = Int
 
+--Returns the empty set
 emptySet :: Set
 emptySet = 0
 
+--Checks if the set is empty
 isEmptySet :: Set -> Bool
 isEmptySet s = s == 0
 
+--Returns a set with all numbers from 1 to the given argument
 fullSet :: Int -> Set
 fullSet x = 2^(x+1) - 2
 
+--Deletes a number from the set
 delFromSet :: Set -> Int -> Set
 delFromSet s i = d'*e+m
     where (d,m) = divMod s e
           e = 2^i
           d' = if odd d then d-1 else d
 
+--Returns the next set from all possible sets
 nextSet :: Set -> Set
 nextSet s = s + 2
 
+--Returns a list with all numbers that are in a set
 setToList :: Set -> [Int]
 setToList s = s2l s 0
     where s2l 0 _ = []
@@ -79,12 +86,15 @@ setToList s = s2l s 0
 
 newtype Table a b = Tbl (b -> a)
 
+--Creates a new table from a list of tuples
 newTable :: Eq b => [(b,a)] -> Table a b
 newTable = foldr updTable (Tbl (\_ -> error "updTable:item not found"))
 
+--Finds the value for a given index
 findTable :: Table a b -> b -> a
 findTable (Tbl f) i = f i
 
+--Updates a table entry
 updTable :: Eq b => (b, a) -> Table a b -> Table a b
 updTable (i, x) (Tbl f) = Tbl g
     where g j | j == i = x
@@ -102,18 +112,22 @@ type TspCoord = (Int, Set)
 type SpTable = Table Distance Int
 type PrevTable = Table [Int] Int
 
+--Converts a RoadMap in a Ajacency Matrix
 toAdjMatrix :: RoadMap -> AdjMatrix
 toAdjMatrix g = Data.Array.array bounds [((i,j), distance g c1 c2) | (i, c1) <- zip [1..] clist, (j, c2) <- zip [1..] clist]
     where n = length clist
           clist = cities g
           bounds = ((1,1), (n,n))
 
+--Converts a city to an int
 cityToInt :: RoadMap -> City -> Int
 cityToInt g c = head [i | (i,city) <- zip [1..] (cities g), city == c]
 
+--Converts an int to a city
 intToCity :: RoadMap -> Int -> City
 intToCity g c = head [city | (i,city) <- zip [1..] (cities g), i == c]
 
+--Returns the distance between two cities if a road exists and returns infinite otherwise
 getDist :: AdjMatrix -> Int -> Int -> Int
 getDist dist i j = getMaybeValue (dist Data.Array.! (i,j))
     where getMaybeValue Nothing = maxBound
@@ -169,10 +183,15 @@ pathDistance roadmap (c1:c2:cs) =
 
         Nothing -> Nothing
 
+
+--Returns the names of the cities with the highest number of roads connecting to them
 rome :: RoadMap -> [City]
 rome g = romeAux (getDegrees g) [] 0
 
-
+--Auxiliar function for rome 
+--[(City, Integer)] - List with all cities and respective degree
+--[City] - Cities with higher degree
+--Integer - Greatest degree so far
 romeAux :: [(City, Integer)] -> [City] -> Integer -> [City]
 romeAux [] l _ = l
 romeAux (x:xs) l maxi
@@ -200,8 +219,17 @@ incDegree (c1, c2) (b1, b2) (x:xs)
     | fst x == c2 && not b2 = (fst x, snd x + 1) : incDegree (c1,c2) (b1, True) xs
     | otherwise = x : incDegree (c1,c2) (b1, b2) xs
 
+
+--Returns True if roadmap is strongly connected, since it is undirected, runs a dfs and compares it with the full list of cities
+--Roadmap - Graph
+-- Bool - True if strongly connected 
 isStronglyConnected :: RoadMap -> Bool
-isStronglyConnected = undefined
+isStronglyConnected r =  length (dfs (head (cities r)) []) == length (cities r)
+                            where
+                                dfs :: City -> [City] -> [City]
+                                dfs c visited | c `elem` visited = visited
+                                              | otherwise =  foldr dfs (c : visited) adj
+                                                where adj = map fst (adjacent r c)
 
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath roadmap c1 c2 
@@ -245,21 +273,28 @@ updateDistSource adjMatrix dist prev pq newPQ u
 
 recursivePath :: PrevTable -> Int -> Int -> [Int] -> [[Int]] -> [[Int]]
 recursivePath prevCity source target path acc 
-    | previous == [] = path:acc
+    | previous == [] = if path == [] then acc else (source:path):acc
     | otherwise = buildPath prevCity source previous (target:path) acc
     where
         previous = findTable prevCity target
 
 buildPath :: PrevTable -> Int -> [Int] -> [Int] -> [[Int]] -> [[Int]]
 buildPath prevCity source [] path acc = acc
-buildPath prevCity source (p:ps) path acc =  (buildPath prevCity source ps path (recursivePath prevCity source p path acc))
+buildPath prevCity source (p:ps) path acc = buildPath prevCity source ps path (recursivePath prevCity source p path acc)
 
+
+--Returns the shortest tour using a dynamic programming approach
 travelSales :: RoadMap -> Path
 travelSales g = if cost == maxBound then [] else map (intToCity g) p --transform int path to city path
     where n = length (cities g)
           t = fillTableTsp (toAdjMatrix g) n (newTable []) (1, emptySet)
           (cost, p) = findTable t (n, fullSet (n-1))
 
+--Returns an auxiliar table for TSP
+--AdjMatrix - Adjacency matrix
+--Int - number of cities
+--TspTable - table to be filled
+--TspCoord - Coordinates to the table to be filled with a value
 fillTableTsp :: AdjMatrix -> Int -> TspTable -> TspCoord -> TspTable
 fillTableTsp dist n t (i, s)
     | (i == (n+1)) && (s == fullSet n) = t --table filled
@@ -267,6 +302,11 @@ fillTableTsp dist n t (i, s)
     | otherwise = fillTableTsp dist n updatedT (i+1, s) --fill next entry in the column
     where updatedT = updTable ((i, s), fillTableEntryTsp dist n t (i, s)) t --update current entry
 
+--Returns the value to fill in the giving coordinates
+--AdjMatrix - Adjacency matrix
+--Int - number of cities
+--TspTable - table to be filled
+--TspCoord - Coordinates to the table to be filled with a value
 fillTableEntryTsp :: AdjMatrix -> Int -> TspTable -> TspCoord -> TspEntry
 fillTableEntryTsp dist n t (i, s)
     | isEmptySet s = (getMaybeValue (dist Data.Array.! (i,n)), [i,n])
@@ -275,6 +315,18 @@ fillTableEntryTsp dist n t (i, s)
           getMaybeValue Nothing = maxBound
           getMaybeValue (Just x) = x
 
+
+--Returns the shortest tour using a brute force approach
+tspBruteForce :: RoadMap -> Path
+tspBruteForce g = if cost == maxBound then [] else map (intToCity g) p --transform int path to city path
+    where n = length (cities g)
+          (cost, p) = findTour (toAdjMatrix g) n (n, fullSet (n-1))
+
+
+--Finds the shortest path starting in a city going through the cities in the set given
+--AdjMatrix - Adjacency matrix
+--Int - number of cities
+--TspCoord - tuple with the starting city and the set
 findTour :: AdjMatrix -> Int -> TspCoord -> TspEntry
 findTour dist n  (i, s)
     | isEmptySet s = (getMaybeValue (dist Data.Array.! (i,n)), [i,n])
@@ -283,10 +335,6 @@ findTour dist n  (i, s)
           getMaybeValue Nothing = maxBound
           getMaybeValue (Just x) = x
 
-tspBruteForce :: RoadMap -> Path
-tspBruteForce g = if cost == maxBound then [] else map (intToCity g) p --transform int path to city path
-    where n = length (cities g)
-          (cost, p) = findTour (toAdjMatrix g) n (n, fullSet (n-1))
 
 -- Some graphs to test your work
 gTest1 :: RoadMap
@@ -297,13 +345,4 @@ gTest2 = [("0","1",10),("0","2",15),("0","3",20),("1","2",35),("1","3",25),("2",
 
 gTest3 :: RoadMap -- unconnected graph
 gTest3 = [("0","1",4),("2","3",2)]
-
-gTestLarge :: RoadMap
-gTestLarge = [ ("A", "B", 10), ("A", "C", 15), ("A", "D", 20), ("A", "E", 25),
-               ("B", "C", 35), ("B", "D", 25), ("B", "E", 30),
-               ("C", "D", 30), ("C", "E", 20),
-               ("D", "E", 15), ("B", "F", 40), ("C", "F", 50), 
-               ("D", "F", 45), ("E", "F", 35),
-               ("F", "G", 60), ("A", "G", 55), ("B", "G", 65), 
-               ("C", "G", 70), ("D", "G", 80), ("E", "G", 75)]
 
