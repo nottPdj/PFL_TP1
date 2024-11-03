@@ -142,6 +142,9 @@ getCities (a,b,_) = (a,b)
 getDistance :: (City,City,Distance) -> Distance
 getDistance (_,_,d) = d
 
+--Returns list of all the cities in the roadmap
+--Roadmap - Graph
+--[City] - List of all the cities
 cities :: RoadMap -> [City]
 cities [] = []
 cities ((c1, c2, d):xs) | elem c1 rest && elem c2 rest = rest
@@ -165,6 +168,10 @@ distance (x:xs) a b
     | otherwise = distance xs a b
     where cities = getCities x
 
+--Returns a list of tuples with cities adjacent to the chosen city and the distance between the two
+--Roadmap - Graph
+--City - Starting city
+--[(City,Distance)] - List of tuples with all cities adjacent to the starting distance and their distance
 adjacent :: RoadMap -> City -> [(City,Distance)]
 adjacent [] c = []
 adjacent ((c1,c2,d):xs) c 
