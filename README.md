@@ -47,18 +47,18 @@ Comparing the theoretical complexity we can see that O((n-1)!) is worse than O(n
 //TODO
 
 
-## Shortest's Path
+## Shortest Path
 
 #### Implementation
 
 The implementation of the shortestPath function was an adaptation of Dijkstra's algorithm.
 
-For this, we defined the type PriorityQueue*, which was implemented through a min-Heap, since the priority is from the nodes that have the least distance from the source. 
+For this, we defined the type *PriorityQueue* , which was implemented through a min-Heap, since the priority is from the nodes that have the least distance from the source. 
 
 Like in the TSP, the RoadMap was converted to an Adjacency Matrix representation and each city was attributed an Int (starting from 1).
-To store, check and update the distances from the source to each node and each path, tables were used, of types SpTable* and PrevTable*. 
+To store, check and update the distances from the source to each node and each path, tables were used, of types *SpTable* and *PrevTable*. 
  
-The Dijkstra's algorithm return the first the shortest path from the source to the target, however if there's more than a shortest path, it returns the first found. Since we were aiming for a different approach, returning all the shortests paths, we needed to adapt the algorithm. After finding a shortest path, we also need to check if we can reach the source with the same total distance as the shortest.
+The Dijkstra's algorithm return the first the shortest path from the source to the target, however if there's more than a shortest path, it returns the first found. Since we were aiming for a different approach, returning all the shortest paths, we needed to adapt the algorithm. After finding a shortest path, we also need to check if we can reach the source with the same total distance as the shortest.
 
 #### Time Complexity
 
