@@ -9,10 +9,43 @@ import qualified Data.Bits
 type City = String
 type Path = [City]
 type Distance = Int
-
 type RoadMap = [(City,City,Distance)]
-
 type AdjMatrix = Data.Array.Array (Int,Int) (Maybe Distance)
+type PriorityQueue = Heap (Distance, Int)
+
+-- HEAP
+
+data Heap a = Empty
+            | Node a (Heap a) (Heap a)
+            deriving (Show, Eq)
+
+merge :: Ord a => Heap a -> Heap a -> Heap a
+merge Empty h = h
+merge h Empty = h
+merge h1@(Node x left1 right1) h2@(Node y left2 right2)
+    | x <= y    = Node x left1 (merge right1 h2)
+    | otherwise = Node y left2 (merge h1 right2)
+
+insert :: Ord a => a -> Heap a -> Heap a
+insert x h = merge (Node x Empty Empty) h
+
+findMin :: Ord a => Heap a -> a
+findMin (Node x _ _) = x
+
+removeMin :: Ord a => Heap a -> Heap a
+removeMin Empty = Empty
+removeMin (Node _ left right) = merge left right
+
+size :: Heap a -> Int
+size Empty = 0
+size (Node _ left right) = 1 + size left + size right
+
+populateQueue :: PriorityQueue -> Int -> Int -> PriorityQueue
+populateQueue q size source 
+    | size == 0 = q
+    | size == source = populateQueue q (size -1) source
+    | otherwise = populateQueue (insert (maxBound, size) q) (size -1) source
+    
 
 -- SET
 
@@ -64,7 +97,10 @@ type TspTable = Table TspEntry TspCoord
 type TspEntry = (Int, [Int])
 type TspCoord = (Int, Set)
 
+-- SP table
 
+type SpTable = Table Distance Int
+type PrevTable = Table [Int] Int
 
 toAdjMatrix :: RoadMap -> AdjMatrix
 toAdjMatrix g = Data.Array.array bounds [((i,j), distance g c1 c2) | (i, c1) <- zip [1..] clist, (j, c2) <- zip [1..] clist]
@@ -102,7 +138,10 @@ cities ((c1, c2, d):xs) | elem c1 rest && elem c2 rest = rest
                             rest = cities xs
 
 areAdjacent :: RoadMap -> City -> City -> Bool
-areAdjacent = undefined
+areAdjacent [] _ _ = False
+areAdjacent ((a,b,c):xs) c1 c2
+    | (a == c1 && b == c2) || (a == c2 && b == c1 ) = True
+    |  otherwise = areAdjacent xs c1 c2
 
 -- Returns Just distance between two cities if connected directly. Else returns Nothing.
 distance :: RoadMap -> City -> City -> Maybe Distance
@@ -113,10 +152,22 @@ distance (x:xs) a b
     where cities = getCities x
 
 adjacent :: RoadMap -> City -> [(City,Distance)]
-adjacent = undefined
+adjacent [] c = []
+adjacent ((c1,c2,d):xs) c 
+    | c1 == c = (c2,d):adjacent xs c
+    | c2 == c = (c1,d):adjacent xs c
+    | otherwise = adjacent xs c
 
 pathDistance :: RoadMap -> Path -> Maybe Distance
-pathDistance = undefined
+pathDistance _ [] = Just 0
+pathDistance _ [_] = Just 0
+pathDistance roadmap (c1:c2:cs) =
+    case distance roadmap c1 c2  of
+        Just dist -> case pathDistance roadmap (c2:cs) of 
+            Just rest -> Just (dist + rest)
+            Nothing -> Nothing
+
+        Nothing -> Nothing
 
 rome :: RoadMap -> [City]
 rome g = romeAux (getDegrees g) [] 0
@@ -153,8 +204,53 @@ isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected = undefined
 
 shortestPath :: RoadMap -> City -> City -> [Path]
-shortestPath = undefined
+shortestPath roadmap c1 c2 
+    | c1 == c2 = [[c1]]
+    | otherwise = map (map (intToCity roadmap)) (dijkstra adjMatrix pq distSource prevCity source target n)
+        where
+            adjMatrix = toAdjMatrix roadmap
+            pq = populateQueue (insert (0,source) Empty) n source
+            distSource = newTable [if city == source then (city,0) else (city,maxBound) | city <- [1..n]]
+            prevCity = newTable [(city,[]) | city <- [1..n]]
+            source = cityToInt roadmap c1
+            target = cityToInt roadmap c2
+            n = length (cities roadmap)
+            
 
+dijkstra :: AdjMatrix -> PriorityQueue -> SpTable -> PrevTable -> Int -> Int -> Int -> [[Int]]
+dijkstra adjMatrix Empty _ prevCity source target n = recursivePath prevCity source target [] []
+dijkstra adjMatrix pq distSource prevCity source target n = dijkstra adjMatrix newPQ newDistSource newPrevCity source target n
+    where 
+        (newDistSource, newPrevCity,newPQ) = updateDistSource adjMatrix distSource prevCity (removeMin pq) Empty u 
+        u = snd(findMin pq)
+
+updateDistSource:: AdjMatrix -> SpTable -> PrevTable -> PriorityQueue -> PriorityQueue -> Int ->  (SpTable, PrevTable, PriorityQueue)
+updateDistSource adjMatrix dist prev Empty pq u = (dist,prev,pq)
+updateDistSource adjMatrix dist prev pq newPQ u  
+    | dist2 == maxBound = updateDistSource adjMatrix dist prev (removeMin pq) (insert (distv, v) newPQ) u 
+    | alt <= distv = updateDistSource adjMatrix newDist newPrev (removeMin pq) (insert (alt, v) newPQ) u 
+    | otherwise = updateDistSource adjMatrix dist prev (removeMin pq) (insert (distv, v) newPQ) u 
+    where
+        alt = dist1 + dist2
+        dist1 = findTable dist u
+        dist2 = getDist adjMatrix u v
+        distv = findTable dist v
+        newDist = updTable (v,alt) dist
+        newPrev = updTable (v,(u:(findTable prev v))) prev
+        v = snd (findMin pq) 
+
+
+
+recursivePath :: PrevTable -> Int -> Int -> [Int] -> [[Int]] -> [[Int]]
+recursivePath prevCity source target path acc 
+    | previous == [] = path:acc
+    | otherwise = buildPath prevCity source previous (target:path) acc
+    where
+        previous = findTable prevCity target
+
+buildPath :: PrevTable -> Int -> [Int] -> [Int] -> [[Int]] -> [[Int]]
+buildPath prevCity source [] path acc = acc
+buildPath prevCity source (p:ps) path acc =  (buildPath prevCity source ps path (recursivePath prevCity source p path acc))
 
 travelSales :: RoadMap -> Path
 travelSales g = if cost == maxBound then [] else map (intToCity g) p --transform int path to city path
@@ -162,7 +258,7 @@ travelSales g = if cost == maxBound then [] else map (intToCity g) p --transform
           t = fillTableTsp (toAdjMatrix g) n (newTable []) (1, emptySet)
           (cost, p) = findTable t (n, fullSet (n-1))
 
-fillTableTsp :: AdjMatrix -> Int -> TspTable -> TspCoord -> Table TspEntry TspCoord
+fillTableTsp :: AdjMatrix -> Int -> TspTable -> TspCoord -> TspTable
 fillTableTsp dist n t (i, s)
     | (i == (n+1)) && (s == fullSet n) = t --table filled
     | i == (n+1) = fillTableTsp dist n t (1, nextSet s) --column filled
